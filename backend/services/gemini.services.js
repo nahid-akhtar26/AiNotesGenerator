@@ -1,0 +1,56 @@
+const GEMINI_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+
+export const generateGeminiResponse = async (prompt) => {
+  try {
+    const response = await fetch(
+      `${GEMINI_URL}?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err);
+    }
+
+    const data = await response.json();
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      throw new Error("No text returned from Gemini");
+    }
+
+    // clean markdown
+    const cleanText = text
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    try {
+      return JSON.parse(cleanText);
+    } catch (parseError) {
+      console.error("JSON Parse Error:", cleanText);
+      throw new Error("Invalid JSON returned from Gemini");
+    }
+  } catch (error) {
+    console.error("Gemini API Error:", error.message);
+    throw error;
+  }
+};
